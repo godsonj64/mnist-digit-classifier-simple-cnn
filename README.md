@@ -1,65 +1,81 @@
 # MNIST Digit Classifier (Simple CNN)
 
-This project trains an image classifier that recognizes handwritten digits (0-9) from the
-classic MNIST dataset. It uses a **MobileNetV3-Small** model with transfer learning as the
-recommended model, and a **small CNN trained from scratch** as a baseline.
+A simple image classifier that recognizes handwritten digits (0-9) from the classic MNIST dataset using PyTorch.
 
-## Task
+## Overview
 
-- **Task type:** image classification
-- **Classes:** 10 (digits 0 through 9)
-- **Metrics:** accuracy, F1 score
-- **Export formats:** PyTorch (`.pt`), ONNX (`.onnx`)
-- **Epochs:** 5
+- **Task:** Image classification (10 classes, digits 0-9)
+- **Dataset format:** Image folder (one subfolder per class)
+- **Recommended model:** EfficientNet-B0 (transfer learning) — adapted for single-channel grayscale input
+- **Baseline model:** A small CNN trained from scratch
+- **Metrics:** Accuracy and F1 score
+- **Export formats:** PyTorch (`.pt`) and ONNX (`.onnx`)
+- **Epochs:** 20
 
-## Dataset format
-
-The code expects an `image_folder` layout (one subfolder per class):
+## Project layout
 
 ```
-data/
-  train/
-    0/ img1.png img2.png ...
-    1/ ...
-    ...
-    9/ ...
-  val/
-    0/ ...
-    ...
-    9/ ...
+.
+├── README.md
+├── requirements.txt
+├── Dockerfile
+├── configs/default.yaml
+├── data/README.md
+├── src/
+│   ├── dataset.py
+│   ├── model.py
+│   ├── train.py
+│   ├── evaluate.py
+│   ├── export.py
+│   └── utils.py
+├── tests/test_model_forward.py
+└── scripts/run_train.sh
 ```
-
-See `data/README.md` for how to produce this layout from MNIST automatically.
 
 ## Quick start
 
+1. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Prepare your data as described in [`data/README.md`](data/README.md). You need
+   `data/train/<class>/*.png` and `data/val/<class>/*.png`.
+
+3. Train the model:
+
+   ```bash
+   bash scripts/run_train.sh
+   ```
+
+   During training you will see one line per epoch like:
+
+   ```
+   epoch 1/20 loss=0.4123 val_acc=0.9512
+   ```
+
+4. Evaluate the trained model:
+
+   ```bash
+   python -m src.evaluate --config configs/default.yaml --checkpoint checkpoints/best.pt
+   ```
+
+5. Export the model to PyTorch and ONNX:
+
+   ```bash
+   python -m src.export --config configs/default.yaml --checkpoint checkpoints/best.pt
+   ```
+
+## Choosing the model
+
+Set `model.name` in `configs/default.yaml` to either:
+
+- `efficientnet_b0` — the recommended transfer-learning model.
+- `small_cnn` — the baseline CNN trained from scratch.
+
+## Running tests
+
 ```bash
-pip install -r requirements.txt
-
-# (optional) download MNIST and create the image_folder layout
-python -m src.dataset --prepare --data-dir data
-
-# train
-bash scripts/run_train.sh
-
-# evaluate
-python -m src.evaluate --config configs/default.yaml
-
-# export to PyTorch + ONNX
-python -m src.export --config configs/default.yaml
+pytest tests/
 ```
-
-## Configuration
-
-All settings live in `configs/default.yaml`. Switch between the recommended model and the
-baseline by changing the `model.name` field to `mobilenet_v3_small` or `small_cnn`.
-
-## Output
-
-During training one line is printed per epoch in this exact format:
-
-```
-epoch 1/5 loss=0.3124 val_acc=0.9521
-```
-
-The best checkpoint is saved to `outputs/best_model.pt`.

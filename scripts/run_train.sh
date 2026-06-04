@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-CONFIG=${1:-configs/default.yaml}
-
-if [ ! -d "data/train" ]; then
-  echo "No data found, preparing MNIST..."
-  python -m src.dataset --prepare --data-dir data
-fi
+CONFIG="${1:-configs/default.yaml}"
 
 python -m src.train --config "$CONFIG"

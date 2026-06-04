@@ -1,30 +1,28 @@
+# Default configuration for the MNIST Digit Classifier
+
 seed: 42
 
 data:
-  data_dir: data
-  train_split: train
-  val_split: val
-  image_size: 32
-  num_workers: 2
+  root: data
+  train_dir: train
+  val_dir: val
+  image_size: 28
+  num_classes: 10
+  batch_size: 64
+  num_workers: 4
 
 model:
-  # Options: mobilenet_v3_small (recommended) or small_cnn (baseline)
-  name: mobilenet_v3_small
-  num_classes: 10
+  # Options: efficientnet_b0 (recommended) or small_cnn (baseline)
+  name: small_cnn
   pretrained: true
 
 train:
-  epochs: 5
-  batch_size: 64
+  epochs: 20
   lr: 0.001
   weight_decay: 0.0001
-  device: auto
-
-output:
-  dir: outputs
-  checkpoint_name: best_model.pt
+  device: cuda  # falls back to cpu automatically if cuda is unavailable
+  checkpoint_dir: checkpoints
 
 export:
-  pytorch_name: model_export.pt
-  onnx_name: model_export.onnx
-  onnx_opset: 12
+  output_dir: exported
+  onnx_opset: 13
