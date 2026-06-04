@@ -1,6 +1,4 @@
-"""Training loop for the MNIST digit classifier."""
 import argparse
-import os
 
 import torch
 import torch.nn as nn
@@ -10,84 +8,83 @@ from src.model import build_model
 from src.utils import (
     compute_metrics,
     ensure_dir,
-    get_device,
     load_config,
+    resolve_device,
     set_seed,
 )
 
 
-def train_one_epoch(model, loader, criterion, optimizer, device):
-    """Run a single training pass and return the average loss."""
-    model.train()
-    total_loss = 0.0
-    total_samples = 0
-    for images, labels in loader:
-        images, labels = images.to(device), labels.to(device)
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item() * images.size(0)
-        total_samples += images.size(0)
-    return total_loss / max(total_samples, 1)
-
-
-@torch.no_grad()
-def evaluate(model, loader, device):
-    """Evaluate the model and return accuracy and F1 metrics."""
+def evaluate_model(model, loader, device):
+    """Run the model over a dataset and return predictions and metrics."""
     model.eval()
-    y_true, y_pred = [], []
-    for images, labels in loader:
-        images = images.to(device)
-        outputs = model(images)
-        preds = outputs.argmax(dim=1).cpu().tolist()
-        y_pred.extend(preds)
-        y_true.extend(labels.tolist())
-    return compute_metrics(y_true, y_pred)
+    all_true, all_pred = [], []
+    with torch.no_grad():
+        for images, labels in loader:
+            images = images.to(device)
+            logits = model(images)
+            preds = logits.argmax(dim=1).cpu()
+            all_pred.extend(preds.tolist())
+            all_true.extend(labels.tolist())
+    return compute_metrics(all_true, all_pred)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Train the MNIST digit classifier.")
-    parser.add_argument("--config", default="configs/default.yaml")
-    args = parser.parse_args()
-
-    cfg = load_config(args.config)
+def train(config_path):
+    """Train the model and save the best checkpoint."""
+    cfg = load_config(config_path)
     set_seed(cfg["seed"])
-    device = get_device(cfg["train"]["device"])
+    device = resolve_device(cfg["train"]["device"])
 
     train_loader, val_loader = build_dataloaders(cfg)
     model = build_model(cfg).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=cfg["train"]["lr"],
         weight_decay=cfg["train"]["weight_decay"],
     )
 
     epochs = cfg["train"]["epochs"]
-    ckpt_dir = cfg["train"]["checkpoint_dir"]
-    ensure_dir(ckpt_dir)
+    checkpoint = cfg["train"]["checkpoint"]
+    ensure_dir(checkpoint)
+    best_acc = -1.0
 
-    best_acc = 0.0
     for epoch in range(1, epochs + 1):
-        loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        metrics = evaluate(model, val_loader, device)
+        model.train()
+        running_loss = 0.0
+        num_batches = 0
+        for images, labels in train_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+            logits = model(images)
+            loss = criterion(logits, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+            num_batches += 1
+
+        avg_loss = running_loss / max(num_batches, 1)
+        metrics = evaluate_model(model, val_loader, device)
         acc = metrics["accuracy"]
-        print(f"epoch {epoch}/{epochs} loss={loss:.4f} val_acc={acc:.4f}", flush=True)
 
-        if acc >= best_acc:
+        print(f"epoch {epoch}/{epochs} loss={avg_loss:.4f} val_acc={acc:.4f}")
+
+        if acc > best_acc:
             best_acc = acc
-            torch.save(
-                {"model_state": model.state_dict(), "config": cfg},
-                os.path.join(ckpt_dir, "best.pt"),
-            )
+            torch.save({"model_state": model.state_dict(), "config": cfg}, checkpoint)
 
-    torch.save(
-        {"model_state": model.state_dict(), "config": cfg},
-        os.path.join(ckpt_dir, "last.pt"),
-    )
+    if best_acc < 0:
+        torch.save({"model_state": model.state_dict(), "config": cfg}, checkpoint)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Train MNIST digit classifier")
+    parser.add_argument("--config", default="configs/default.yaml")
+    args = parser.parse_args()
+    train(args.config)
 
 
 if __name__ == "__main__":

@@ -1,42 +1,27 @@
-# Data layout
+# Data
 
-This project uses the **image folder** format. Organize your images so each digit
-class has its own subfolder inside `train/` and `val/`.
+This project uses an **image-folder** dataset layout. Each class has its own
+subfolder, and images for that class live inside it.
 
 ```
 data/
-├── train/
-│   ├── 0/
-│   │   ├── img001.png
-│   │   └── ...
-│   ├── 1/
-│   ├── 2/
-│   ├── ...
-│   └── 9/
-└── val/
-    ├── 0/
-    ├── 1/
-    ├── ...
-    └── 9/
+  train/
+    0/ *.png
+    1/ *.png
+    ...
+    9/ *.png
+  val/
+    0/ *.png
+    ...
+    9/ *.png
 ```
 
-- There should be exactly **10 class folders** named `0` through `9`.
-- Images are grayscale MNIST digits, automatically resized to 28x28.
-- Common image formats (`.png`, `.jpg`, `.jpeg`, `.bmp`) are supported.
+- There are 10 classes, one per digit (0-9).
+- Folder names are used as class labels.
+- Images can be grayscale; they are converted to the size in the config.
 
-## Getting MNIST as image folders
+## Automatic download
 
-If you have MNIST in another format, you can export it to this layout using
-`torchvision`:
-
-```python
-from torchvision.datasets import MNIST
-from pathlib import Path
-
-for split, train_flag in [("train", True), ("val", False)]:
-    ds = MNIST(root="raw", train=train_flag, download=True)
-    for idx, (img, label) in enumerate(ds):
-        out = Path("data") / split / str(label)
-        out.mkdir(parents=True, exist_ok=True)
-        img.save(out / f"{idx}.png")
-```
+If the folders above are missing and `data.auto_download` is `true` in
+`configs/default.yaml`, the code downloads MNIST via torchvision and writes
+it into this image-folder layout automatically. No manual steps required.

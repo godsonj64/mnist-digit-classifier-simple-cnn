@@ -1,25 +1,19 @@
-"""Smoke tests verifying that the models run a forward pass correctly."""
 import torch
 
-from src.model import build_model
-
-
-def _base_cfg(name):
-    return {
-        "data": {"num_classes": 10, "image_size": 28},
-        "model": {"name": name, "pretrained": False},
-    }
+from src.model import SmallCNN, build_mobilenet_v3_small
 
 
 def test_small_cnn_forward():
-    model = build_model(_base_cfg("small_cnn"))
-    x = torch.randn(2, 1, 28, 28)
+    """SmallCNN should output one score per class for each image."""
+    model = SmallCNN(num_classes=10)
+    x = torch.randn(2, 3, 32, 32)
     out = model(x)
     assert out.shape == (2, 10)
 
 
-def test_efficientnet_b0_forward():
-    model = build_model(_base_cfg("efficientnet_b0"))
-    x = torch.randn(2, 1, 28, 28)
+def test_mobilenet_forward():
+    """MobileNetV3-Small should output one score per class for each image."""
+    model = build_mobilenet_v3_small(num_classes=10, pretrained=False)
+    x = torch.randn(2, 3, 32, 32)
     out = model(x)
     assert out.shape == (2, 10)
