@@ -1,67 +1,83 @@
 # MNIST Digit Classifier (Simple CNN)
 
-This project trains an image-recognition model to identify handwritten digits (0-9)
-using the classic MNIST dataset arranged as an image folder.
+A lightweight convolutional neural network (CNN) that recognises handwritten digits (0–9) from the classic MNIST dataset. The project also ships an EfficientNet-B0 transfer-learning variant so you can compare both approaches side-by-side.
 
-- **Task:** Image classification (10 classes)
-- **Recommended model:** MobileNetV3-Small (transfer learning)
-- **Baseline model:** Small CNN trained from scratch
-- **Metrics:** accuracy, F1
-- **Export formats:** ONNX, TorchScript
-- **Epochs:** 5
-
-## Dataset layout
-
-The code expects an `image_folder` layout (see `data/README.md`):
+## Project layout
 
 ```
-data/
-  train/
-    0/ img001.png ...
-    1/ ...
-    ...
-    9/ ...
-  val/
-    0/ ...
-    ...
-    9/ ...
+.
+├── configs/
+│   └── default.yaml        # All hyper-parameters in one place
+├── data/
+│   └── README.md           # How to download / structure the dataset
+├── scripts/
+│   └── run_train.sh        # One-command training launcher
+├── src/
+│   ├── dataset.py          # Dataset loading & augmentation
+│   ├── model.py            # CNN baseline + EfficientNet-B0 variant
+│   ├── train.py            # Training loop
+│   ├── evaluate.py         # Accuracy & F1 evaluation
+│   ├── export.py           # ONNX & TorchScript export
+│   └── utils.py            # Shared helpers (logging, seeding, …)
+├── tests/
+│   └── test_model_forward.py
+├── Dockerfile
+├── requirements.txt
+└── README.md
 ```
-
-If no dataset is found, the training and evaluation scripts automatically
-download MNIST and write it into the image-folder layout for you.
 
 ## Quick start
 
+### 1 – Install dependencies
+
 ```bash
 pip install -r requirements.txt
-
-# Train
-bash scripts/run_train.sh
-
-# Evaluate
-python -m src.evaluate --config configs/default.yaml
-
-# Export to ONNX + TorchScript
-python -m src.export --config configs/default.yaml
 ```
 
-## Configuration
+### 2 – Prepare data
 
-All settings live in `configs/default.yaml`. You can switch between the
-MobileNetV3-Small transfer-learning model and the small baseline CNN by
-changing `model.name` to `mobilenet_v3_small` or `small_cnn`.
+See `data/README.md`. The dataset is downloaded automatically if you use the default config.
+
+### 3 – Train
+
+```bash
+bash scripts/run_train.sh
+# or, with custom overrides:
+python src/train.py --config configs/default.yaml --epochs 20
+```
+
+### 4 – Evaluate
+
+```bash
+python src/evaluate.py --config configs/default.yaml --checkpoint outputs/best_model.pt
+```
+
+### 5 – Export
+
+```bash
+python src/export.py --config configs/default.yaml --checkpoint outputs/best_model.pt
+# Writes outputs/model.onnx and outputs/model_torchscript.pt
+```
 
 ## Docker
 
 ```bash
 docker build -t mnist-classifier .
-docker run --rm mnist-classifier
+docker run --rm -v $(pwd)/outputs:/app/outputs mnist-classifier bash scripts/run_train.sh
 ```
 
-## Training output
+## Metrics
 
-During training, one line is printed per epoch in this exact format:
+| Metric | Description |
+|--------|-------------|
+| accuracy | Fraction of digits predicted correctly |
+| f1 | Macro-averaged F1 score across all 10 digit classes |
 
-```
-epoch 1/5 loss=0.3210 val_acc=0.9512
-```
+## Model options
+
+| Key | Description |
+|-----|-------------|
+| `baseline` | Small 3-layer CNN trained from scratch (~90 k parameters) |
+| `efficientnet_b0` | EfficientNet-B0 with ImageNet pre-trained weights (transfer learning) |
+
+Set `model.name` in `configs/default.yaml` to switch between them.

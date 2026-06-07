@@ -1,27 +1,42 @@
 # Data
 
-This project uses an **image-folder** dataset layout. Each class has its own
-subfolder, and images for that class live inside it.
+## Option A – Automatic download (default)
+
+When `data.use_torchvision_mnist: true` is set in `configs/default.yaml`, `torchvision` will automatically download the MNIST dataset (~11 MB) to `data/mnist/` the first time you run training. No extra steps required.
+
+## Option B – Custom image-folder dataset
+
+If you have your own greyscale digit images, set `data.use_torchvision_mnist: false` and arrange them as:
 
 ```
-data/
+data/mnist/
   train/
-    0/ *.png
-    1/ *.png
-    ...
-    9/ *.png
-  val/
-    0/ *.png
-    ...
-    9/ *.png
+    0/   ← images of digit 0
+    1/   ← images of digit 1
+    …
+    9/
+  test/
+    0/
+    …
+    9/
 ```
 
-- There are 10 classes, one per digit (0-9).
-- Folder names are used as class labels.
-- Images can be grayscale; they are converted to the size in the config.
+`torchvision.datasets.ImageFolder` is used to load this structure, so any image format supported by Pillow (PNG, JPEG, BMP, …) is accepted.
 
-## Automatic download
+## Class mapping
 
-If the folders above are missing and `data.auto_download` is `true` in
-`configs/default.yaml`, the code downloads MNIST via torchvision and writes
-it into this image-folder layout automatically. No manual steps required.
+| Folder name | Digit |
+|-------------|-------|
+| 0 | 0 |
+| 1 | 1 |
+| … | … |
+| 9 | 9 |
+
+## Data statistics (standard MNIST)
+
+| Split | Images |
+|-------|--------|
+| Train | 60 000 |
+| Test  | 10 000 |
+
+Images are 28 × 28 greyscale; the data loader resizes them to the `image_size` specified in the config (default 32 × 32) and converts them to 3-channel RGB so both models accept the same input.

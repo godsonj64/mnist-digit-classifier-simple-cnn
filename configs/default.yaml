@@ -1,28 +1,40 @@
-seed: 42
+project:
+  name: mnist_digit_classifier
+  seed: 42
+  output_dir: outputs
 
 data:
-  root: data
-  train_dir: data/train
-  val_dir: data/val
-  image_size: 32
-  num_workers: 2
-  auto_download: true
+  # Root directory; torchvision will auto-download MNIST here
+  root: data/mnist
+  # Image folder mode: when use_torchvision_mnist is false the loader
+  # expects subfolders  data/mnist/train/0/, data/mnist/train/1/, …
+  use_torchvision_mnist: true
+  image_size: 32          # resize to 32×32 (needed by EfficientNet-B0)
+  num_workers: 4
+  val_split: 0.1          # fraction of training set used for validation
 
 model:
-  # Options: mobilenet_v3_small | small_cnn
-  name: mobilenet_v3_small
+  # Options: "baseline" | "efficientnet_b0"
+  name: baseline
   num_classes: 10
+  # EfficientNet-B0 specific
   pretrained: true
+  freeze_backbone: false
 
-train:
-  epochs: 5
+training:
+  epochs: 20
   batch_size: 128
-  lr: 0.001
+  learning_rate: 0.001
   weight_decay: 0.0001
-  device: auto
-  checkpoint: artifacts/model.pt
+  optimizer: adam         # adam | sgd
+  scheduler: cosine       # cosine | step | none
+  # StepLR params (only used when scheduler=step)
+  step_size: 7
+  gamma: 0.1
+  # Early stopping
+  early_stopping_patience: 5
 
 export:
-  onnx_path: artifacts/model.onnx
-  torchscript_path: artifacts/model.ts
-  opset: 13
+  onnx_path: outputs/model.onnx
+  torchscript_path: outputs/model_torchscript.pt
+  opset_version: 17
